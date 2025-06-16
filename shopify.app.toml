@@ -3,7 +3,7 @@
 client_id = "02a23f37bc1a8a4e5f10051a8955a3b0"
 name = "Cincopa Uploader"
 handle = "cincopa-uploader-1"
-application_url = "https://irc-discusses-frozen-amazing.trycloudflare.com"
+application_url = "https://cincopa-uploader.vercel.app"
 embedded = true
 
 [build]
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://irc-discusses-frozen-amazing.trycloudflare.com/auth/callback",
-  "https://irc-discusses-frozen-amazing.trycloudflare.com/auth/shopify/callback",
-  "https://irc-discusses-frozen-amazing.trycloudflare.com/api/auth/callback"
+  "https://cincopa-uploader.vercel.app/auth/callback",
+  "https://cincopa-uploader.vercel.app/auth/shopify/callback",
+  "https://cincopa-uploader.vercel.app/api/auth/callback"
 ]
 
 [pos]
