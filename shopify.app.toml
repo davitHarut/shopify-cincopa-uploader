@@ -1,0 +1,36 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "02a23f37bc1a8a4e5f10051a8955a3b0"
+name = "Cincopa Uploader"
+handle = "cincopa-uploader-1"
+application_url = "https://irc-discusses-frozen-amazing.trycloudflare.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true
+
+[webhooks]
+api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products"
+
+[auth]
+redirect_urls = [
+  "https://irc-discusses-frozen-amazing.trycloudflare.com/auth/callback",
+  "https://irc-discusses-frozen-amazing.trycloudflare.com/auth/shopify/callback",
+  "https://irc-discusses-frozen-amazing.trycloudflare.com/api/auth/callback"
+]
+
+[pos]
+embedded = false
