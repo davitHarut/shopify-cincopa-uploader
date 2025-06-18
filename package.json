@@ -2,7 +2,7 @@
   "name": "cincopa-uploader",
   "private": true,
   "scripts": {
-    "build": "prisma generate && npm run build",
+    "build": "prisma generate && remix vite:build",
     "dev": "shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
