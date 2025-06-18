@@ -10,21 +10,21 @@ export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return { apiKey: process.env.SHOPIFY_API_KEY || "", cincopaApiToken: process.env.CINCOPA_API_TOKEN };
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData();
+  const { apiKey, cincopaApiToken } = useLoaderData();
 
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey}>
+    <AppProvider isEmbeddedApp apiKey={apiKey} cincopaApiToken={cincopaApiToken}>
       <NavMenu>
         <Link to="/app" rel="home">
           Home
         </Link>
         <Link to="/app/additional">Settings</Link>
       </NavMenu>
-      <Outlet />
+      <Outlet context={{ cincopaApiToken }}/>
     </AppProvider>
   );
 }

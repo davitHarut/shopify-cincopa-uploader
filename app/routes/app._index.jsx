@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useFetcher, useSearchParams } from "@remix-run/react";
-import { EditIcon, UploadIcon } from '@shopify/polaris-icons';
+import { useFetcher, useSearchParams, useOutletContext } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -13,97 +12,81 @@ import {
   ChoiceList,
   Banner,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { EditIcon } from '@shopify/polaris-icons';
+import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { apiAssetSetMeta, apiAssetList, apiGetUploadUrl } from '../constants/apiUrls'
-import EmbedCode from './embedCode'
+import { apiAssetSetMeta, apiAssetList, apiGetUploadUrl } from '../constants/apiUrls';
+import EmbedCode from '../components/embedCode';
 
 export const action = async ({ request }) => {
   const formData = await request.formData();
   const title = formData.get("title") || "Cincopa example product";
   const rid = formData.get("rid");
   const asset_type = formData.get("type");
-
+  const productIdParam = formData.get("productId");
   const { admin } = await authenticate.admin(request);
+  let product_id;
+  let product = null;
 
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
+  if(!productIdParam){
+    const response = await admin.graphql(
+      `#graphql
+        mutation populateProduct($product: ProductCreateInput!) {
+          productCreate(product: $product) {
+            product {
+              id
+              title
+              handle
+              status
+              variants(first: 10) {
+                edges {
+                  node {
+                    id
+                    price
+                    barcode
+                    createdAt
+                  }
                 }
               }
             }
           }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title,
+        }`,
+      {
+        variables: {
+          product: {
+            title,
+          },
         },
-      },
-    }
-  );
-
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyRemixTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
       }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    }
-  );
-
-  const variantResponseJson = await variantResponse.json();
-
-  // Create metafield definitions for rid and type
-  const createMetafieldDefinition = async (definition) => {
-    const res = await admin.graphql(
-      `#graphql
-      mutation CreateMetafieldDefinition($definition: MetafieldDefinitionInput!) {
-        metafieldDefinitionCreate(definition: $definition) {
-          createdDefinition {
-            id
-            name
-          }
-          userErrors {
-            field
-            message
-            code
-          }
-        }
-      }`,
-      { variables: { definition } }
     );
-    return res.json();
-  };
+
+    const responseJson = await response.json();
+    const product = responseJson.data.productCreate.product;
+    product_id = product.id;
+  }else{
+    product_id = 'gid://shopify/Product/' + productIdParam;
+  }
+
+      const createMetafieldDefinition = async (definition) => {
+      const res = await admin.graphql(
+        `#graphql
+        mutation CreateMetafieldDefinition($definition: MetafieldDefinitionInput!) {
+          metafieldDefinitionCreate(definition: $definition) {
+            createdDefinition {
+              id
+              name
+            }
+            userErrors {
+              field
+              message
+              code
+            }
+          }
+        }`,
+        { variables: { definition } }
+      );
+      return res.json();
+    };
 
   const dataMetaRid = await createMetafieldDefinition({
     name: "Cincopa Asset RID",
@@ -147,14 +130,14 @@ export const action = async ({ request }) => {
           {
             key: "cincopa_asset_rid",
             namespace: "cincopa",
-            ownerId: product.id,
+            ownerId: product_id,
             type: "single_line_text_field",
             value: rid,
           },
           {
             key: "cincopa_asset_type",
             namespace: "cincopa",
-            ownerId: product.id,
+            ownerId: product_id,
             type: "single_line_text_field",
             value: asset_type,
           },
@@ -166,39 +149,40 @@ export const action = async ({ request }) => {
   const dataMetaSet = await responseMetaSet.json();
 
   return {
-    product: product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
+    product,
     meta: { rid: dataMetaRid, type: dataMetaType, set: dataMetaSet },
     success: true,
-    productId: product.id,
+    productId: product_id,
   };
 };
 
 export default function Index() {
+  const { cincopaApiToken } = useOutletContext();
   const fetcher = useFetcher();
-  const shopify = useAppBridge();
   const uploaderRef = useRef(null);
   const hasInitialized = useRef(false);
-  const [title, setTitle] = useState("");
-  const [uploadUrl, setUploadUrl] = useState(null);
-  // const [newUpload, setNewUpload] = useState(false);
-  const [assetData, setAssetData] = useState({});
-  const [assetRid, setAssetRid] = useState('');
-  const [assetTitle, setAssetTitle] = useState('');
-  const [selectedType, setSelectedType] = useState(['video']);
-  const [assetDate, setAssetDate] = useState('');
-  const [assetDescription, setAssetDescription] = useState('');
-  const [assetNotes, setAssetNotes] = useState('');
-  const [relatedLinkText, setRelatedLinkText] = useState('');
-  const [relatedLinkUrl, setRelatedLinkUrl] = useState('');
-  const [assetReferenceId, setAssetReferenceId] = useState('');
-  const [status, setStatus] = useState(null);
+
   const [searchParams] = useSearchParams();
   const productIdParam = searchParams.get("productId");
   const assetRidParam = searchParams.get("assetRid");
-  const accessToken = '230692iojeswdxdgkmnxklh25rivovgmpc';
-  
 
+  const [uploadUrl, setUploadUrl] = useState(null);
+  const [status, setStatus] = useState(null);
+
+  // Asset States
+  const [assetData, setAssetData] = useState({});
+  const [assetRid, setAssetRid] = useState('');
+  const [assetTitle, setAssetTitle] = useState('');
+  const [assetDate, setAssetDate] = useState('');
+  const [assetDescription, setAssetDescription] = useState('');
+  const [assetNotes, setAssetNotes] = useState('');
+  const [selectedType, setSelectedType] = useState(['video']);
+  const [relatedLinkText, setRelatedLinkText] = useState('');
+  const [relatedLinkUrl, setRelatedLinkUrl] = useState('');
+  const [assetReferenceId, setAssetReferenceId] = useState('');
+  const [showUploader, setShowUploader] = useState(true);
+
+  // Handle fetcher response
   useEffect(() => {
     if (fetcher.data?.success) {
       setStatus(`✅ Product created with ID: ${fetcher.data.productId}`);
@@ -208,225 +192,161 @@ export default function Index() {
   }, [fetcher.data]);
 
   useEffect(() => {
-    getUploadUrl();
-  }, [accessToken]);
-
-  useEffect(() => {
-    fetchAssetData(assetRidParam);
-    if(!assetRid){
-      // setNewUpload(false);
+    if(productIdParam){
+      setShowUploader(false);
+      hasInitialized.current = false;
+    }else{
+      setShowUploader(true);
     }
+  }, [productIdParam])
+
+  // Get Cincopa Upload URL
+  useEffect(() => {
+    if (!cincopaApiToken) return;
+    const fetchUploadUrl = async () => {
+      try {
+        const res = await fetch(`${apiGetUploadUrl}?api_token=${cincopaApiToken}`);
+        const data = await res.json();
+        setUploadUrl(data?.upload_url);
+      } catch (error) {
+        console.error("Upload URL fetch error", error);
+      }
+    };
+    fetchUploadUrl();
+  }, [cincopaApiToken]);
+
+  // Fetch asset data from Cincopa
+  useEffect(() => {
+    if (!assetRidParam) return;
+    fetchAssetData(assetRidParam);
   }, [assetRidParam]);
 
+  // Load uploader script and initialize UI
   useEffect(() => {
     if (!uploadUrl || !uploaderRef.current || hasInitialized.current) return;
 
     const script = document.createElement("script");
     script.src = "https://wwwcdn.cincopa.com/_cms/ugc/uploaderui.js";
     script.async = true;
-    document.body.appendChild(script);
 
     script.onload = () => {
-      if (window.cpUploadUI && uploaderRef.current && !hasInitialized.current) {
+      if (window.cpUploadUI && uploaderRef.current) {
         const uploadUI = new cpUploadUI(uploaderRef.current, {
           upload_url: uploadUrl,
           multiple: false,
-          width: "auto",
-          height: "auto",
-          onUploadComplete: function (data) {
-            if (data.uploadState === "Complete" && data.rid) {
-              let assetType = getMimeCategory(data?.type || data?.file?.type);
-              setSelectedType(assetType);
-              fetcher.submit(
-                {
-                  title,
-                  rid: data.rid,
-                  type: assetType,
-                },
-                { method: "POST" }
-              );
-              setMeta(data.rid);
-              setAssetRid(data.rid);
-              setAssetTitle('Example Title');
-              setAssetDate(new Date().toISOString());
-            }
-          },
+          onUploadComplete: handleUploadComplete,
         });
-
         uploadUI.start();
         hasInitialized.current = true;
       }
     };
-  }, [uploadUrl, title]);
 
-  const getUploadUrl = async() => {
-    try {
-        const response = await fetch(`${apiGetUploadUrl}?api_token=${accessToken}`);
-        if (!response.ok) throw new Error('Failed to fetch data');
-        const result = await response.json();
-        setUploadUrl(result?.upload_url);
-    } catch (err) {
-        console.error('Error: Get Upload Url', err);
+    document.body.appendChild(script);
+  }, [uploadUrl, showUploader]);
+  
+
+  const handleUploadComplete = async (data) => {
+    if (data.uploadState === "Complete" && data.rid) {
+    const assetType = getMimeCategory(data?.type || data?.file?.type);
+    const params = {
+      title: assetTitle,
+      rid: data.rid,
+      type: assetType
     }
+
+    if(productIdParam){
+      params.productId = productIdParam;
+    }
+
+    fetcher.submit(params, { method: "POST" }
+    );
+
+    setSelectedType([assetType]);
+    setAssetRid(data.rid);
+    setAssetTitle('Example Title');
+    setAssetDate(new Date().toISOString());
+
+    await setMeta(data.rid);
+    await fetchAssetData(data.rid);
+
+    // if (productIdParam) {
+    //   setShowUploader(true);
+    // } else {
+    //   setShowUploader(false);
+    // }
   }
-
-  const getMimeCategory = (mimeType) => {
-    if (typeof mimeType !== "string") return "unknown";
-    const [type] = mimeType.toLowerCase().split("/");
-    switch (type) {
-      case "image":
-      case "video":
-      case "music":
-        return type;
-      default:
-        return "unknown";
-    }
-  };
-
-  const setMeta = async(rid) =>{
-    try {
-      const response = await fetch(`${apiAssetSetMeta}?api_token=${accessToken}&rid=${rid}&reference_id=shopify`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const result = await response.json();
-      console.log(result, 'rrrrr');
-    } catch (err) {
-      console.log(err, 'Error: Asset Set Meta Data');
-    }
   };
 
   const fetchAssetData = async (rid) => {
     try {
-        const response = await fetch(`${apiAssetList}?api_token=${accessToken}&rid=${rid}`);
+      const res = await fetch(`${apiAssetList}?api_token=${cincopaApiToken}&rid=${rid}`);
+      const { items } = await res.json();
+      const asset = items?.[0];
+      if (!asset) return;
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch data');
-        }
-
-        const result = await response.json();
-        const asset = result?.items?.[0];
-        if (!asset) return;
-        setAssetData(asset);
-
-        setAssetRid(asset.rid || '');
-        setAssetTitle(asset.caption || asset.filename);
-        setSelectedType([getMimeCategory(asset.type)]);
-        setAssetDate(asset.uploaded || '');
-        setAssetDescription(asset.description || '');
-        setAssetNotes(asset.long_description || '');
-        setRelatedLinkText(asset.related_link_text || '');
-        setRelatedLinkUrl(asset.related_link_url || '');
-        setAssetReferenceId(asset.reference_id || '');
-
-    } catch (err) {
-      console.error('Error: Fetch Asset Data', err);
+      setAssetData(asset);
+      setAssetRid(asset.rid);
+      setAssetTitle(asset.caption || asset.filename);
+      setSelectedType([getMimeCategory(asset.type)]);
+      setAssetDate(asset.uploaded || '');
+      setAssetDescription(asset.description || '');
+      setAssetNotes(asset.long_description || '');
+      setRelatedLinkText(asset.related_link_text || '');
+      setRelatedLinkUrl(asset.related_link_url || '');
+      setAssetReferenceId(asset.reference_id || '');
+    } catch (error) {
+      console.error("Fetch asset error", error);
     }
   };
 
-  const handleAssetClick = (rid) => {
-    if(!accessToken) return;
+  const setMeta = async (rid) => {
+    try {
+      await fetch(`${apiAssetSetMeta}?api_token=${cincopaApiToken}&rid=${rid}&reference_id=shopify`);
+    } catch (error) {
+      console.error("Set meta error", error);
+    }
+  };
 
-    const loadScripts = async () => {
-      try {
-        await loadScript("//wwwcdn.cincopa.com/_cms/media-platform/libasync.js");
+  const handleAssetClick = async (rid) => {
+    if (!cincopaApiToken) return;
+    await loadScript("//wwwcdn.cincopa.com/_cms/media-platform/libasync.js");
 
-      } catch (error) {
-          console.error("Error loading scripts:", error);
-      }
+    const editorConfig = {
+      load_modules: [
+        { name: 'info', title: 'Asset Info', order: 0 },
+        { name: 'thumbnail', title: 'Set Thumbnail', order: 4 },
+        { name: 'video-trim', title: 'Trimming', order: 5 },
+        { name: 'partitioning-speaker', title: 'Auto Transcribe & CC', feature: 'assets-subtitles', order: 7 },
+        { name: 'chapters', feature: 'assets-timeline', order: 8 },
+        { name: 'annotations', feature: 'assets-timeline', order: 9 },
+        { name: 'call-to-action', feature: 'assets-timeline', order: 10 },
+        { name: 'replace-asset', order: 11 },
+        { name: 'video-renditions', feature: 'video-renditions', title: 'Renditions', order: 12 },
+        { name: 'video-analytics', order: 14 },
+        { name: 'downloads-asset', title: 'Attached Files & Links', order: 15 },
+        { name: 'lead-generation', title: 'Lead Generation', order: 16 },
+      ],
+      token: cincopaApiToken,
+      rid,
+      editorV2: true,
     };
 
-    loadScripts();
-
-    let editor = {
-        load_modules: [
-            {
-              name: 'info',
-              title: 'Asset Info',
-              order: 0
-            },
-            {
-              name: 'thumbnail',
-              title: 'Set Thumbnail',
-              order: 4
-            },
-            {
-              name: 'video-trim',
-              title: 'Trimming',
-              order: 5
-            },
-            {
-              name: 'partitioning-speaker',
-              title: 'Auto Transcribe & CC',
-              feature: 'assets-subtitles',
-              order: 7
-            },
-            {
-              name: 'chapters',
-              feature: 'assets-timeline',
-              order: 8
-            },
-            {
-              name: 'annotations',
-              feature: 'assets-timeline',
-              order: 9
-            },
-            {
-              name: 'call-to-action',
-              feature: 'assets-timeline',
-              order: 10
-            },
-            {
-              name: 'replace-asset',
-              order: 11
-            },
-            {
-              name: 'video-renditions',
-              feature: 'video-renditions',
-              title: 'Renditions',
-              order: 12
-            },
-            {
-              name: "video-analytics",
-              order: 14
-            },
-            {
-              name: 'downloads-asset',
-              title: 'Attached Files & Links',
-              order: 15
-            },
-            {
-              title: 'Lead Generation',
-              name: "lead-generation",
-              order: 16
-            },
-          ],
-    token: accessToken,
-    rid,
-    editorV2: true,
-    }
-
-    cincopa?.loadEditor(editor);
+    cincopa?.loadEditor(editorConfig);
   };
 
-  const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
+  const loadScript = (src) =>
+    new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src;
       script.async = true;
-      script.onload = () => resolve();
-      script.onerror = (err) => reject(new Error(`Script load error: ${src}`));
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Script load error: ${src}`));
       document.body.appendChild(script);
     });
-  };
 
-  // const uploadNew = () => {
-  //   setNewUpload(false);
-  // };
-
-  const saveAsset = () => {
-
+  const getMimeCategory = (mimeType) => {
+    const [type] = (mimeType || "").toLowerCase().split("/");
+    return ["image", "video", "music"].includes(type) ? type : "unknown";
   };
 
   return (
@@ -437,81 +357,38 @@ export default function Index() {
           <Layout.Section>
             <Card title="Upload Media and Create Product" sectioned>
               <BlockStack gap="400">
-                {productIdParam && 
-                  <InlineGrid gap="400" columns={5}>
+                {productIdParam && (
+                  <InlineGrid gap="400" columns={3}>
                     <Button variant="primary" icon={EditIcon} onClick={() => handleAssetClick(assetRidParam)}>Edit Asset</Button>
-                    {/* <Button variant="primary" icon={UploadIcon} onClick={() => uploadNew()}>Upload</Button> */}
-                    <Button variant="primary" onClick={() => saveAsset()}>Save</Button>
+                      <Button variant="primary" onClick={() => setShowUploader(true)}>
+                        Upload New Asset
+                      </Button>
                   </InlineGrid>
-                }   
-                <Box>
-                  {!productIdParam && (
-                    <div ref={uploaderRef} />
-                  )}
-                </Box>
-                {status && (
-                  <Banner title="Status" status="info">
-                    {status}
-                  </Banner>
                 )}
-                {Object.keys(assetData).length && (
-                  <EmbedCode
-                        asset={assetData}
-                    />
-                )}             
-                <TextField
-                  label="Asset RID"
-                  value={assetRid}
-                  autoComplete="off"
-                />
-                <TextField
-                  label="Asset Title"
-                  value={assetTitle}
-                  onChange={setTitle}
-                  autoComplete="off"
-                />
+                {showUploader && ( <div ref={uploaderRef} />)}
+                {status && <Banner title="Status" status="info">{status}</Banner>}
+                {Object.keys(assetData).length > 0 && (
+                  <EmbedCode asset={assetData} />
+                )}
+
+                <TextField label="Asset RID" value={assetRid} autoComplete="off" />
+                <TextField label="Asset Title" value={assetTitle} onChange={setAssetTitle} autoComplete="off" />
                 <ChoiceList
                   title="Asset Type"
                   choices={[
-                    {label: 'Video', value: 'video'},
-                    {label: 'Image', value: 'image'},
-                    {label: 'Audio', value: 'music'},
-                    {label: 'Unknown', value: 'unknown'},
+                    { label: "Video", value: "video" },
+                    { label: "Image", value: "image" },
+                    { label: "Audio", value: "music" },
+                    { label: "Unknown", value: "unknown" },
                   ]}
                   selected={selectedType}
                 />
-                <TextField
-                  label="Asset Description"
-                  value={assetDescription}
-                  autoComplete="off"
-                  multiline={4}
-                />
-                <TextField
-                  label="Asset Notes"
-                  value={assetNotes}
-                  autoComplete="off"
-                  multiline={4}
-                />
-                <TextField
-                  label="Asset Related Link Text"
-                  value={relatedLinkText}
-                  autoComplete="off"
-                />
-                <TextField
-                  label="Asset Related Link Url"
-                  value={relatedLinkUrl}
-                  autoComplete="off"
-                />
-                <TextField
-                  label="Asset Reference ID"
-                  value={assetReferenceId}
-                  autoComplete="off"
-                />
-                <TextField
-                  label="Asset Uploaded"
-                  autoComplete="off"
-                  value={assetDate}
-                />
+                <TextField label="Asset Description" value={assetDescription} multiline={4} autoComplete="off" />
+                <TextField label="Asset Notes" value={assetNotes} multiline={4} autoComplete="off" />
+                <TextField label="Related Link Text" value={relatedLinkText} autoComplete="off" />
+                <TextField label="Related Link URL" value={relatedLinkUrl} autoComplete="off" />
+                <TextField label="Reference ID" value={assetReferenceId} autoComplete="off" />
+                <TextField label="Uploaded" value={assetDate} autoComplete="off" />
               </BlockStack>
             </Card>
           </Layout.Section>
