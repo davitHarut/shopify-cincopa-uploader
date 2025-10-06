@@ -3,6 +3,7 @@ api_version = "2025-04"
 [[extensions]]
 name = "t:name"
 handle = "cincopa-product-configure"
+uid = "518b8773-2b9e-3cd9-db54-2a0944ca19b75ddf63cc"
 type = "ui_extension"
 
 

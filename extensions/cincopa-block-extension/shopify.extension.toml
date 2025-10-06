@@ -4,6 +4,7 @@ api_version = "2025-04"
 # Change the merchant-facing name of the extension in locales/en.default.json
 name = "t:name"
 handle = "cincopa-block-extension"
+uid = "b8ed7993-d5d7-4c99-9313-be494d4851938f1fd282"
 type = "ui_extension"
 
 

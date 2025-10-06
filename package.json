@@ -2,7 +2,7 @@
   "name": "cincopa-uploader",
   "private": true,
   "scripts": {
-    "build": "prisma generate && remix vite:build",
+    "build": "remix vite:build",
     "dev": "shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
@@ -16,8 +16,7 @@
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite",
-    "postinstall": "prisma generate"
+    "vite": "vite"
   },
   "type": "module",
   "engines": {
@@ -30,6 +29,7 @@
     "@remix-run/node": "^2.16.1",
     "@remix-run/react": "^2.16.1",
     "@remix-run/serve": "^2.16.1",
+    "@shopify/app-bridge": "^3.7.10",
     "@shopify/app-bridge-react": "^4.1.6",
     "@shopify/polaris": "^12.0.0",
     "@shopify/shopify-app-remix": "^3.7.0",

@@ -4,6 +4,7 @@ api_version = "2025-04"
 # Change the merchant-facing name of the extension in locales/en.default.json
 name = "t:name"
 handle = "cincopa-uploader-extension"
+uid = "6be11092-8096-a8b8-a3a1-2919061b776949278888"
 type = "ui_extension"
 
 

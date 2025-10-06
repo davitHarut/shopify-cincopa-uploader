@@ -3,12 +3,11 @@
 client_id = "02a23f37bc1a8a4e5f10051a8955a3b0"
 name = "Cincopa Uploader"
 handle = "cincopa-uploader-1"
-application_url = "https://cal-buffalo-between-mens.trycloudflare.com"
+application_url = "https://along-protective-dutch-dylan.trycloudflare.com"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-04"
@@ -26,11 +25,7 @@ api_version = "2025-04"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [
-  "https://cal-buffalo-between-mens.trycloudflare.com/auth/callback",
-  "https://cal-buffalo-between-mens.trycloudflare.com/auth/shopify/callback",
-  "https://cal-buffalo-between-mens.trycloudflare.com/api/auth/callback"
-]
+redirect_urls = ["https://along-protective-dutch-dylan.trycloudflare.com/auth/callback", "https://along-protective-dutch-dylan.trycloudflare.com/auth/shopify/callback", "https://along-protective-dutch-dylan.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false
