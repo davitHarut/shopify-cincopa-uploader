@@ -17,16 +17,20 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { apiAssetSetMeta, apiAssetList, apiGetUploadUrl } from '../constants/apiUrls';
 import EmbedCode from '../components/embedCode';
-// import CollectionSelect from "../components/collectionSelect";
 import SearchAssets from "../components/searchAssets";
 
 import { json } from "@remix-run/node";
 import { getCincopaTempToken } from "../utils/cincopa.server";
 
 export const headers = () => ({
-  "Content-Security-Policy": "frame-ancestors https://yourdomain.com https://admin.shopify.com",
+  "Content-Security-Policy": `
+    frame-ancestors https://admin.shopify.com;
+    script-src 'self' https://wwwcdn.cincopa.com;
+    connect-src 'self' https://wwwcdn.cincopa.com;
+  `,
   "X-Frame-Options": "ALLOWALL",
 });
+
 
 export const loader = async ({ request }) => {
   try {
@@ -71,9 +75,9 @@ export const loader = async ({ request }) => {
       ownerType: "PRODUCT",
     });
 
-    return json(data);
+    return json(data, { headers: headers() });
   } catch (error) {
-    return json({ error: error.message }, { status: 500 });
+    return json({ error: error.message }, { status: 500, headers: headers() });
   }
 };
 
