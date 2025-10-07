@@ -23,14 +23,15 @@ import { json } from "@remix-run/node";
 import { getCincopaTempToken } from "../utils/cincopa.server";
 
 export const headers = () => ({
-  "Content-Security-Policy": `
-    frame-ancestors https://admin.shopify.com;
-    script-src 'self' https://wwwcdn.cincopa.com;
-    connect-src 'self' https://wwwcdn.cincopa.com;
-  `,
+  "Content-Security-Policy": 
+    "frame-ancestors https://admin.shopify.com https://your-app-domain.com; " +
+    "script-src 'self' https://wwwcdn.cincopa.com https://rtcdn.cincopa.com 'unsafe-inline' 'unsafe-eval'; " +
+    "connect-src 'self' https://wwwcdn.cincopa.com https://rtcdn.cincopa.com; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' https://wwwcdn.cincopa.com https://rtcdn.cincopa.com data:; " +
+    "media-src 'self' https://wwwcdn.cincopa.com https://rtcdn.cincopa.com",
   "X-Frame-Options": "ALLOWALL",
 });
-
 
 export const loader = async ({ request }) => {
   try {
@@ -255,6 +256,12 @@ export default function Index() {
       await fetchAssetData(data.rid);
     }
   };
+
+  useEffect(() => {
+    if (showUploader) {
+      hasInitialized.current = false;
+    }
+  }, [showUploader]);
 
   const fetchAssetData = async (rid) => {
     try {
