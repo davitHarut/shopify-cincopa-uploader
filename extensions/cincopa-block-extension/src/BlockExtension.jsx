@@ -79,10 +79,14 @@ function App() {
     <AdminBlock title="Cincopa Asset">
       <BlockStack>
         <Link
-          to={`/?productId=${productId}&assetRid=${product?.metafield?.value || ''}`}
+          to={
+            product?.metafield?.value
+              ? `/?productId=${productId}&assetRid=${product.metafield.value}`
+              : `/?productId=${productId}`
+          }
           rel="noopener noreferrer"
         >
-          Edit asset
+          Edit Cincopa Asset
         </Link>
       </BlockStack>
     </AdminBlock>

@@ -163,7 +163,7 @@ function SearchAssets({ cincopaTempToken, openSearchModal, onClose, onSelect }) 
   };
 
   return (
-    <div style={{ height: '500px' }}>
+    <div style={{height: openSearchModal ? '500px' : 'auto'}}>
       <Frame>
         <Modal
           size="large"
