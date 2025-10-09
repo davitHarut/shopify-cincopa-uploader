@@ -141,6 +141,7 @@ export const action = async ({ request }) => {
 
 export default function Index() {
   const loaderData = useLoaderData(); 
+  console.log(loaderData, 'loader data');
   const cincopaTempToken = loaderData.temp_token; 
 
   const fetcher = useFetcher();
